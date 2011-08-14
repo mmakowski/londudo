@@ -10,6 +10,8 @@ module Londudo (
   makeMove  
 ) where
 
+import Control.Arrow (second)
+
 newtype Player = Player { playerId :: Int } 
                deriving (Eq, Show)
 
@@ -31,7 +33,8 @@ data VisibleGameState = VisibleGameState { currentPlayerV :: Player
                                          , visiblePlayerStates :: VisiblePlayerStates }
                       deriving (Eq, Show)
                                
-data PlayerState = PlayerState { visibleState :: VisiblePlayerState, hiddenValues :: [Int] }
+data PlayerState = PlayerState { visibleState :: VisiblePlayerState
+                               , hiddenValues :: [Int] }
                  deriving (Eq, Show)
 type PlayerStates = PlayerMap PlayerState                          
 
@@ -39,8 +42,7 @@ data GameState = GameState { currentPlayer :: Player
                            , currentBid :: Bid
                            , playerStates :: PlayerStates }
                | RoundFinished { loser :: Player
-                               , diceCounts :: DiceCounts 
-                               }
+                               , diceCounts :: DiceCounts }
                | GameFinished { winner :: Player }
                | RoundStart { currentPlayer :: Player
                             , playerStates :: PlayerMap PlayerState }
@@ -54,9 +56,9 @@ data Move
 
 
 visibleGameState :: GameState -> VisibleGameState
-visibleGameState (GameState cp bid []) = (VisibleGameState cp bid []) 
+visibleGameState (GameState cp bid []) = VisibleGameState cp bid []
 visibleGameState (GameState cp bid ((pl, pst):psts)) = 
-  (VisibleGameState cp bid ((pl, vpst):vpsts))
+  VisibleGameState cp bid ((pl, vpst):vpsts)
   where
     vpst = visibleState pst
     vpsts = visiblePlayerStates $ visibleGameState (GameState cp bid psts)
@@ -79,7 +81,7 @@ bidIsValid :: GameState -> Bool
 bidIsValid _ = False -- TODO
 
 diceCounts' :: GameState -> DiceCounts
-diceCounts' = map (\(p, ps) -> (p, stateToDiceCount ps)) . playerStates
+diceCounts' = map (second stateToDiceCount) . playerStates
   where
     stateToDiceCount :: PlayerState -> Int  
     stateToDiceCount s = let vs = visibleState s 
@@ -115,10 +117,10 @@ countOfVisible :: Int -> VisibleGameState -> Int
 countOfVisible v = length . filter (isValue v) . allRevealedValues 
                    
 allRevealedValues :: VisibleGameState -> [Int]
-allRevealedValues =  concat . map (revealedValues . snd) . visiblePlayerStates
+allRevealedValues =  concatMap (revealedValues . snd) . visiblePlayerStates
                                       
 isValue :: Int -> Int -> Bool
-isValue base comp = comp == base || comp == 1
+isValue base comp = comp `elem` [base, 1]
 
 raiseCount :: Bid -> Move
 raiseCount (Bid count value) = Raise $ Bid (count + 1) value

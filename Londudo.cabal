@@ -1,0 +1,24 @@
+name:           Londudo
+version:        0.1.0
+cabal-version:  >= 1.9.2
+license:        MIT
+author:         Maciek Makowski
+synopsis:       A variant of the game of Dudo (http://en.wikipedia.org/wiki/Dudo)
+build-type:     Simple
+
+executable londudo
+  hs-source-dirs: src
+  main-is:        Main.hs
+  build-depends:  base == 4.3.*
+
+test-suite all-tests
+  type:           exitcode-stdio-1.0
+  hs-source-dirs: .,src,test
+  main-is:    	  Test.hs
+  build-depends:  base == 4.3.*,
+                  HUnit == 1.2.*,
+                  QuickCheck == 2.4.*,
+                  random == 1.0.*,
+                  test-framework == 0.4.*,
+                  test-framework-hunit == 0.2.*,
+                  test-framework-quickcheck2 == 0.2.*

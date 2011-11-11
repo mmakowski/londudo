@@ -42,7 +42,7 @@ data GameState = GameState { currentPlayer :: Player
                            , currentBid :: Bid
                            , playerStates :: PlayerStates }
                | RoundFinished { loser :: Player
-                               , diceCounts :: DiceCounts }
+                               , diceCountsS :: DiceCounts }
                | GameFinished { winner :: Player }
                | RoundStart { currentPlayer :: Player
                             , playerStates :: PlayerMap PlayerState }
@@ -71,17 +71,24 @@ chooseMove p ps gs = if countOfVisible (bidValue currentBid) gs >= bidCount curr
     currentBid = currentBidV gs
 
 makeMove :: Move -> GameState -> GameState
-makeMove m@(Raise newBid) gs@(GameState cp bid psts) = GameState (nextPlayer gs) newBid (addMove m cp psts)
+makeMove m@(Raise newBid) gs@(GameState cp bid psts) = 
+  GameState (nextPlayer gs) newBid (addMove m cp psts)
 makeMove Call gs@(GameState cp bid psts) = RoundFinished loser counts
   where
     loser = if bidIsValid gs then cp else previousPlayer gs
-    counts = (takeDiceFrom cp . diceCounts') gs
+    counts = (takeDiceFrom loser . diceCounts) gs
 
 bidIsValid :: GameState -> Bool
-bidIsValid _ = False -- TODO
+bidIsValid (GameState cp bid psts) = (countOf $ bidValue bid) psts >= bidCount bid
+  where
+    countOf v [] = 0
+    countOf v ((_, pst):psts) = countOf' v pst + countOf v psts
+    countOf' v pst = 
+      (length . filter (isValue v)) $ hiddenValues pst ++ revealedValues (visibleState pst)
 
-diceCounts' :: GameState -> DiceCounts
-diceCounts' = map (second stateToDiceCount) . playerStates
+diceCounts :: GameState -> DiceCounts
+diceCounts gs@(RoundFinished _ dc) = dc
+diceCounts gs = (map (second stateToDiceCount) . playerStates) gs
   where
     stateToDiceCount :: PlayerState -> Int  
     stateToDiceCount s = let vs = visibleState s 
@@ -124,6 +131,7 @@ isValue base comp = comp `elem` [base, 1]
 
 raiseCount :: Bid -> Move
 raiseCount (Bid count value) = Raise $ Bid (count + 1) value
+
 {-
 visibleGameState (GameState (Player 2) (Bid 4 6) [((Player 1), (PlayerState (VisiblePlayerState [6, 1] 3 [(RaiseAndRoll (Bid 4 6) [6, 1])]) [5, 3, 3])), ((Player 2), (PlayerState (VisiblePlayerState [] 5 []) [5,4,4,3,2]))])
 -}
